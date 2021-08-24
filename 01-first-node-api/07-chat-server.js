@@ -53,7 +53,7 @@ function respondChat(req, res) {
   res.end('')
 }
 
-function respondSSE(req, res) {
+function respondSSE(_, res) {
   // Establish a connection to the server
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -62,7 +62,10 @@ function respondSSE(req, res) {
 
   // We listen for message events from our chatEmitter object, and when we receive them,
   // we write them to the response body using res.write().
-  const onMessage = (message) => res.write(`data: ${message}\n\n`)
+  const onMessage = (message) => {
+    res.write(`data: ${message}\n\n`)
+    saveChatLog(message)
+  }
   chatEmitter.on('message', onMessage)
 
   // We listen for when the connection to the client has been closed,
@@ -70,6 +73,18 @@ function respondSSE(req, res) {
   res.on('close', () => {
     chatEmitter.off('message', onMessage)
   })
+}
+
+function saveChatLog(chatLogPayload) {
+  const chatLogPath = `${__dirname}/public/chat-log.txt`
+
+  try {
+    fs.readFileSync(chatLogPath)
+  } catch (error) {
+    fs.writeFileSync(chatLogPath, '')
+  }
+
+  fs.appendFileSync(chatLogPath, `${chatLogPayload}\n`)
 }
 
 function respond404(_, res) {
